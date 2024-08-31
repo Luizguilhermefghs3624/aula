@@ -1,0 +1,220 @@
+import pygame
+import sys
+import random
+
+# Inicializa o pygame
+pygame.init()
+
+# Define as dimensões da tela
+LARGURA_TELA = 800
+ALTURA_TELA = 600
+tela = pygame.display.set_mode((LARGURA_TELA, ALTURA_TELA))
+pygame.display.set_caption("Pong")
+
+# Define as cores
+PRETO = (0, 0, 0)
+BRANCO = (255, 255, 255)
+
+# Configura as propriedades das raquetes e da bola
+LARGURA_RAQUETE = 10
+ALTURA_RAQUETE = 100
+RAQUETE_VELOCIDADE = 10
+INICIAL_BOLA_VELOCIDADE = 5
+
+# Classe Raquete
+class Raquete:
+    def __init__(self, x, y):
+        self.rect = pygame.Rect(x, y, LARGURA_RAQUETE, ALTURA_RAQUETE)
+    
+    def mover(self, velocidade):
+        teclas = pygame.key.get_pressed()
+        if teclas[pygame.K_UP] and self.rect.top > 0:
+            self.rect.y -= velocidade
+        if teclas[pygame.K_DOWN] and self.rect.bottom < ALTURA_TELA:
+            self.rect.y += velocidade
+
+    def mover_bot(self, bola, dificuldade):
+        if dificuldade == 'facil':
+            self._movimentar_facil(bola)
+        elif dificuldade == 'medio':
+            self._movimentar_medio(bola)
+        elif dificuldade == 'dificil':
+            self._movimentar_dificil(bola)
+        self._conter_borda()
+
+    def _movimentar_facil(self, bola):
+        margem = 200
+        if bola.rect.centery > self.rect.centery + self.rect.height / 2 + margem:
+            self.rect.y += RAQUETE_VELOCIDADE * 0.5
+        elif bola.rect.centery < self.rect.centery - self.rect.height / 2 - margem:
+            self.rect.y -= RAQUETE_VELOCIDADE * 0.5
+
+    def _movimentar_medio(self, bola):
+        if bola.rect.centery > self.rect.centery + self.rect.height / 3:
+            self.rect.y += RAQUETE_VELOCIDADE
+        elif bola.rect.centery < self.rect.centery - self.rect.height / 3:
+            self.rect.y -= RAQUETE_VELOCIDADE
+
+    def _movimentar_dificil(self, bola):
+        if bola.rect.centery > self.rect.centery:
+            self.rect.y += RAQUETE_VELOCIDADE * 1.5
+        elif bola.rect.centery < self.rect.centery:
+            self.rect.y -= RAQUETE_VELOCIDADE * 1.5
+
+    def _conter_borda(self):
+        if self.rect.top < 0:
+            self.rect.top = 0
+        elif self.rect.bottom > ALTURA_TELA:
+            self.rect.bottom = ALTURA_TELA
+
+# Classe Bola
+class Bola:
+    def __init__(self):
+        self.rect = pygame.Rect(LARGURA_TELA // 2 - 15, ALTURA_TELA // 2 - 15, 30, 30)
+        self.velocidade_x = 0
+        self.velocidade_y = 0
+        self.iniciar = False
+
+    def mover(self):
+        if self.iniciar:
+            self.rect.x += self.velocidade_x
+            self.rect.y += self.velocidade_y
+
+    def verificar_colisao_borda(self):
+        if self.rect.top <= 0 or self.rect.bottom >= ALTURA_TELA:
+            self.velocidade_y = -self.velocidade_y
+
+    def verificar_colisao_raquete(self, raquete):
+        if self.rect.colliderect(raquete.rect):
+            self.velocidade_x = -self.velocidade_x
+
+    def reiniciar(self):
+        self.rect.x = LARGURA_TELA // 2 - 15
+        self.rect.y = ALTURA_TELA // 2 - 15
+        self.velocidade_x = 0
+        self.velocidade_y = 0
+        self.iniciar = False
+
+    def iniciar_movement(self):
+        self.velocidade_x = INICIAL_BOLA_VELOCIDADE
+        self.velocidade_y = INICIAL_BOLA_VELOCIDADE
+        self.iniciar = True
+        if random.choice([True, False]):
+            self.velocidade_x = -self.velocidade_x
+
+# Função para desenhar a pontuação
+def desenhar_pontuacao(pontuacao1, pontuacao2):
+    fonte = pygame.font.Font(None, 74)
+    texto_pontuacao1 = fonte.render(str(pontuacao1), True, BRANCO)
+    texto_pontuacao2 = fonte.render(str(pontuacao2), True, BRANCO)
+    tela.blit(texto_pontuacao1, (LARGURA_TELA // 4, 20))
+    tela.blit(texto_pontuacao2, (LARGURA_TELA * 3 // 4 - texto_pontuacao2.get_width(), 20))
+
+# Função para a tela inicial
+def tela_inicial():
+    fonte = pygame.font.Font(None, 74)
+    texto = fonte.render("Escolha a dificuldade", True, BRANCO)
+    facil = fonte.render("1: Fácil", True, BRANCO)
+    medio = fonte.render("2: Médio", True, BRANCO)
+    dificil = fonte.render("3: Difícil", True, BRANCO)
+    tela.fill(PRETO)
+    tela.blit(texto, (LARGURA_TELA // 4, ALTURA_TELA // 4))
+    tela.blit(facil, (LARGURA_TELA // 2 - 100, ALTURA_TELA // 2 - 50))
+    tela.blit(medio, (LARGURA_TELA // 2 - 100, ALTURA_TELA // 2))
+    tela.blit(dificil, (LARGURA_TELA // 2 - 100, ALTURA_TELA // 2 + 50))
+    pygame.display.flip()
+
+    while True:
+        for evento in pygame.event.get():
+            if evento.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif evento.type == pygame.KEYDOWN:
+                if evento.key == pygame.K_1:
+                    return 'facil'
+                elif evento.key == pygame.K_2:
+                    return 'medio'
+                elif evento.key == pygame.K_3:
+                    return 'dificil'
+
+# Função para mostrar a tela de início
+def tela_inicio():
+    fonte = pygame.font.Font(None, 74)
+    texto = fonte.render("Pressione Enter para começar", True, BRANCO)
+    tela.fill(PRETO)
+    tela.blit(texto, (LARGURA_TELA // 6, ALTURA_TELA // 2 - 50))
+    pygame.display.flip()
+
+    esperando = True
+    while esperando:
+        for evento in pygame.event.get():
+            if evento.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif evento.type == pygame.KEYDOWN:
+                if evento.key == pygame.K_RETURN:
+                    esperando = False
+
+# Inicializa o jogo
+dificuldade = tela_inicial()
+raquete1 = Raquete(50, ALTURA_TELA // 2 - ALTURA_RAQUETE // 2)
+raquete2 = Raquete(LARGURA_TELA - 50 - LARGURA_RAQUETE, ALTURA_TELA // 2 - ALTURA_RAQUETE // 2)
+bola = Bola()
+
+pontuacao1 = 0
+pontuacao2 = 0
+clock = pygame.time.Clock()
+
+# Tela de início
+tela_inicio()
+
+# Inicia a bola
+bola.iniciar_movement()
+
+# Loop principal do jogo
+while True:
+    for evento in pygame.event.get():
+        if evento.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+
+    # Movimenta a raquete do jogador
+    raquete2.mover(RAQUETE_VELOCIDADE)
+
+    # Movimenta o bot
+    raquete1.mover_bot(bola, dificuldade)
+
+    # Move a bola
+    bola.mover()
+    bola.verificar_colisao_borda()
+    bola.verificar_colisao_raquete(raquete2)
+    bola.verificar_colisao_raquete(raquete1)
+
+    # Verifica se a bola saiu da tela (ponto)
+    if bola.rect.left <= 0:
+        pontuacao2 += 1
+        bola.reiniciar()
+        bola.iniciar_movement()
+    elif bola.rect.right >= LARGURA_TELA:
+        pontuacao1 += 1
+        bola.reiniciar()
+        bola.iniciar_movement()
+
+    # Preenche a tela com a cor preta
+    tela.fill(PRETO)
+
+    # Desenha as raquetes e a bola
+    pygame.draw.rect(tela, BRANCO, raquete1.rect)
+    pygame.draw.rect(tela, BRANCO, raquete2.rect)
+    pygame.draw.ellipse(tela, BRANCO, bola.rect)
+    pygame.draw.aaline(tela, BRANCO, (LARGURA_TELA // 2, 0), (LARGURA_TELA // 2, ALTURA_TELA))
+
+    # Desenha a pontuação
+    desenhar_pontuacao(pontuacao1, pontuacao2)
+
+    # Atualiza a tela
+    pygame.display.flip()
+
+    # Define a taxa de atualização do jogo
+    clock.tick(60)
+

@@ -5,61 +5,68 @@ import random
 # Inicializa o pygame
 pygame.init()
 
-# Define as dimensões da tela
+# Configurações da tela
 LARGURA_TELA = 800
 ALTURA_TELA = 600
 tela = pygame.display.set_mode((LARGURA_TELA, ALTURA_TELA))
-pygame.display.set_caption("Pong")
+pygame.display.set_caption("Pong Personalizado")
 
-# Define as cores
-PRETO = (0, 0, 0)
+# Definindo cores
 BRANCO = (255, 255, 255)
+PRETO = (0, 0, 0)
 
-# Configura as propriedades das raquetes e da bola
+# Propriedades das raquetes e da bola
 LARGURA_RAQUETE = 10
 ALTURA_RAQUETE = 100
 RAQUETE_VELOCIDADE = 10
 INICIAL_BOLA_VELOCIDADE = 5
 
+# Carregar a imagem da mesa
+def carregar_imagem_fundo(caminho):
+    try:
+        imagem = pygame.image.load(caminho)
+        imagem = pygame.transform.scale(imagem, (LARGURA_TELA, ALTURA_TELA))  # Ajusta o tamanho da imagem
+        return imagem
+    except pygame.error as e:
+        print(f"Erro ao carregar a imagem do fundo: {e}")
+        return None
+
+# Função para desenhar o fundo da mesa
+def desenhar_fundo():
+    tela.blit(imagem_fundo, (0, 0))  # Exibe a imagem de fundo na tela
+
 # Classe Raquete
 class Raquete:
-    def __init__(self, x, y):
+    def __init__(self, x, y, tecla_up, tecla_down):
         self.rect = pygame.Rect(x, y, LARGURA_RAQUETE, ALTURA_RAQUETE)
+        self.tecla_up = tecla_up
+        self.tecla_down = tecla_down
     
-    def mover(self, velocidade):
+    def mover(self):
         teclas = pygame.key.get_pressed()
-        if teclas[pygame.K_UP] and self.rect.top > 0:
-            self.rect.y -= velocidade
-        if teclas[pygame.K_DOWN] and self.rect.bottom < ALTURA_TELA:
-            self.rect.y += velocidade
+        if teclas[self.tecla_up] and self.rect.top > 0:
+            self.rect.y -= RAQUETE_VELOCIDADE
+        if teclas[self.tecla_down] and self.rect.bottom < ALTURA_TELA:
+            self.rect.y += RAQUETE_VELOCIDADE
 
     def mover_bot(self, bola, dificuldade):
         if dificuldade == 'facil':
-            self._movimentar_facil(bola)
+            margem = 200
+            if bola.rect.centery > self.rect.centery + self.rect.height / 2 + margem:
+                self.rect.y += RAQUETE_VELOCIDADE * 0.5
+            elif bola.rect.centery < self.rect.centery - self.rect.height / 2 - margem:
+                self.rect.y -= RAQUETE_VELOCIDADE * 0.5
         elif dificuldade == 'medio':
-            self._movimentar_medio(bola)
+            if bola.rect.centery > self.rect.centery + self.rect.height / 3:
+                self.rect.y += RAQUETE_VELOCIDADE
+            elif bola.rect.centery < self.rect.centery - self.rect.height / 3:
+                self.rect.y -= RAQUETE_VELOCIDADE
         elif dificuldade == 'dificil':
-            self._movimentar_dificil(bola)
+            if bola.rect.centery > self.rect.centery:
+                self.rect.y += RAQUETE_VELOCIDADE * 1.5
+            elif bola.rect.centery < self.rect.centery:
+                self.rect.y -= RAQUETE_VELOCIDADE * 1.5
         self._conter_borda()
-
-    def _movimentar_facil(self, bola):
-        margem = 200
-        if bola.rect.centery > self.rect.centery + self.rect.height / 2 + margem:
-            self.rect.y += RAQUETE_VELOCIDADE * 0.5
-        elif bola.rect.centery < self.rect.centery - self.rect.height / 2 - margem:
-            self.rect.y -= RAQUETE_VELOCIDADE * 0.5
-
-    def _movimentar_medio(self, bola):
-        if bola.rect.centery > self.rect.centery + self.rect.height / 3:
-            self.rect.y += RAQUETE_VELOCIDADE
-        elif bola.rect.centery < self.rect.centery - self.rect.height / 3:
-            self.rect.y -= RAQUETE_VELOCIDADE
-
-    def _movimentar_dificil(self, bola):
-        if bola.rect.centery > self.rect.centery:
-            self.rect.y += RAQUETE_VELOCIDADE * 1.5
-        elif bola.rect.centery < self.rect.centery:
-            self.rect.y -= RAQUETE_VELOCIDADE * 1.5
 
     def _conter_borda(self):
         if self.rect.top < 0:
@@ -110,8 +117,31 @@ def desenhar_pontuacao(pontuacao1, pontuacao2):
     tela.blit(texto_pontuacao1, (LARGURA_TELA // 4, 20))
     tela.blit(texto_pontuacao2, (LARGURA_TELA * 3 // 4 - texto_pontuacao2.get_width(), 20))
 
-# Função para a tela inicial
-def tela_inicial():
+# Função para selecionar o modo de jogo
+def selecionar_modo_jogo():
+    fonte = pygame.font.Font(None, 74)
+    texto = fonte.render("Escolha o modo de jogo", True, BRANCO)
+    dois_jogadores = fonte.render("1: 2 Jogadores", True, BRANCO)
+    um_jogador = fonte.render("2: 1 Jogador", True, BRANCO)
+    tela.fill(PRETO)
+    tela.blit(texto, (LARGURA_TELA // 4, ALTURA_TELA // 4))
+    tela.blit(dois_jogadores, (LARGURA_TELA // 4, ALTURA_TELA // 2 - 50))
+    tela.blit(um_jogador, (LARGURA_TELA // 4, ALTURA_TELA // 2 + 50))
+    pygame.display.flip()
+
+    while True:
+        for evento in pygame.event.get():
+            if evento.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif evento.type == pygame.KEYDOWN:
+                if evento.key == pygame.K_1:
+                    return 'dois_jogadores'
+                elif evento.key == pygame.K_2:
+                    return 'um_jogador'
+
+# Função para selecionar a dificuldade
+def tela_dificuldade():
     fonte = pygame.font.Font(None, 74)
     texto = fonte.render("Escolha a dificuldade", True, BRANCO)
     facil = fonte.render("1: Fácil", True, BRANCO)
@@ -137,84 +167,103 @@ def tela_inicial():
                 elif evento.key == pygame.K_3:
                     return 'dificil'
 
-# Função para mostrar a tela de início
+# Função para a tela de início
 def tela_inicio():
     fonte = pygame.font.Font(None, 74)
     texto = fonte.render("Pressione Enter para começar", True, BRANCO)
     tela.fill(PRETO)
-    tela.blit(texto, (LARGURA_TELA // 6, ALTURA_TELA // 2 - 50))
+    tela.blit(texto, (LARGURA_TELA // 6, ALTURA_TELA // 2))
     pygame.display.flip()
 
-    esperando = True
-    while esperando:
+    while True:
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
             elif evento.type == pygame.KEYDOWN:
                 if evento.key == pygame.K_RETURN:
-                    esperando = False
+                    return
 
-# Inicializa o jogo
-dificuldade = tela_inicial()
-raquete1 = Raquete(50, ALTURA_TELA // 2 - ALTURA_RAQUETE // 2)
-raquete2 = Raquete(LARGURA_TELA - 50 - LARGURA_RAQUETE, ALTURA_TELA // 2 - ALTURA_RAQUETE // 2)
-bola = Bola()
+# Função para alternar entre modo janela e tela cheia
+def alternar_tela_cheia():
+    global tela, tela_cheia
+    tela_cheia = not tela_cheia
+    if tela_cheia:
+        tela = pygame.display.set_mode((LARGURA_TELA, ALTURA_TELA), pygame.FULLSCREEN)
+    else:
+        tela = pygame.display.set_mode((LARGURA_TELA, ALTURA_TELA))
 
-pontuacao1 = 0
-pontuacao2 = 0
-clock = pygame.time.Clock()
+def main():
+    global imagem_fundo, tela_cheia
 
-# Tela de início
-tela_inicio()
+    # Carregar a imagem de fundo
+    imagem_fundo = carregar_imagem_fundo("mesa.jpg")
+    if imagem_fundo is None:
+        print("Erro ao carregar a imagem da mesa.")
+        return
 
-# Inicia a bola
-bola.iniciar_movement()
+    tela_cheia = False  # Inicialmente, o jogo começa em modo janela
 
-# Loop principal do jogo
-while True:
-    for evento in pygame.event.get():
-        if evento.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
+    tela_inicio()
 
-    # Movimenta a raquete do jogador
-    raquete2.mover(RAQUETE_VELOCIDADE)
+    modo_jogo = selecionar_modo_jogo()
+    print(f"Modo de jogo selecionado: {modo_jogo}")
 
-    # Movimenta o bot
-    raquete1.mover_bot(bola, dificuldade)
+    dificuldade = 'facil'  # padrão
+    if modo_jogo == 'um_jogador':
+        dificuldade = tela_dificuldade()
+        print(f"Dificuldade selecionada: {dificuldade}")
 
-    # Move a bola
-    bola.mover()
-    bola.verificar_colisao_borda()
-    bola.verificar_colisao_raquete(raquete2)
-    bola.verificar_colisao_raquete(raquete1)
+    # Ajustar posições das raquetes
+    raquete_jogador = Raquete(LARGURA_TELA - 30 - LARGURA_RAQUETE, ALTURA_TELA // 2 - ALTURA_RAQUETE // 2, pygame.K_UP, pygame.K_DOWN)
+    raquete_bot = Raquete(30, ALTURA_TELA // 2 - ALTURA_RAQUETE // 2, pygame.K_w, pygame.K_s)
+    bola = Bola()
 
-    # Verifica se a bola saiu da tela (ponto)
-    if bola.rect.left <= 0:
-        pontuacao2 += 1
-        bola.reiniciar()
-        bola.iniciar_movement()
-    elif bola.rect.right >= LARGURA_TELA:
-        pontuacao1 += 1
-        bola.reiniciar()
-        bola.iniciar_movement()
+    pontuacao_jogador = 0
+    pontuacao_bot = 0
 
-    # Preenche a tela com a cor preta
-    tela.fill(PRETO)
+    bola.iniciar_movement()
 
-    # Desenha as raquetes e a bola
-    pygame.draw.rect(tela, BRANCO, raquete1.rect)
-    pygame.draw.rect(tela, BRANCO, raquete2.rect)
-    pygame.draw.ellipse(tela, BRANCO, bola.rect)
-    pygame.draw.aaline(tela, BRANCO, (LARGURA_TELA // 2, 0), (LARGURA_TELA // 2, ALTURA_TELA))
+    clock = pygame.time.Clock()
 
-    # Desenha a pontuação
-    desenhar_pontuacao(pontuacao1, pontuacao2)
+    while True:
+        for evento in pygame.event.get():
+            if evento.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif evento.type == pygame.KEYDOWN:
+                if evento.key == pygame.K_f:  # Tecla 'f' para alternar tela cheia
+                    alternar_tela_cheia()
 
-    # Atualiza a tela
-    pygame.display.flip()
+        desenhar_fundo()
+        raquete_jogador.mover()
+        if modo_jogo == 'um_jogador':
+            raquete_bot.mover_bot(bola, dificuldade)
+        else:
+            raquete_bot.mover()
 
-    # Define a taxa de atualização do jogo
-    clock.tick(60)
+        bola.mover()
+        bola.verificar_colisao_borda()
+        bola.verificar_colisao_raquete(raquete_jogador)
+        bola.verificar_colisao_raquete(raquete_bot)
 
+        if bola.rect.left <= 0:
+            pontuacao_bot += 1
+            bola.reiniciar()
+            bola.iniciar_movement()
+        if bola.rect.right >= LARGURA_TELA:
+            pontuacao_jogador += 1
+            bola.reiniciar()
+            bola.iniciar_movement()
+
+        desenhar_pontuacao(pontuacao_jogador, pontuacao_bot)
+
+        pygame.draw.rect(tela, BRANCO, raquete_jogador.rect)
+        pygame.draw.rect(tela, BRANCO, raquete_bot.rect)
+        pygame.draw.ellipse(tela, BRANCO, bola.rect)
+
+        pygame.display.flip()
+        clock.tick(60)
+
+if __name__ == "__main__":
+    main()

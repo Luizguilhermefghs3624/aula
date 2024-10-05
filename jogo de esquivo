@@ -1,0 +1,243 @@
+import pygame
+import random
+
+# Inicializando o pygame
+pygame.init()
+
+# Definindo constantes
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
+PLAYER_WIDTH = 50
+PLAYER_HEIGHT = 50
+OBSTACLE_WIDTH = 50
+OBSTACLE_HEIGHT = 50
+COIN_WIDTH = 30
+COIN_HEIGHT = 30
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)  # Cor da mensagem de Game Over
+BLUE = (0, 191, 255)  # Cor da pontuação (azul claro)
+BUTTON_COLOR = (0, 128, 255)  # Cor dos botões
+
+# Criando a tela
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption("Economia em Movimento")
+
+# Carregando as imagens
+background_image = pygame.transform.scale(pygame.image.load('background.jpg'), (SCREEN_WIDTH, SCREEN_HEIGHT))
+player_image = pygame.transform.scale(pygame.image.load('pessoa.png'), (PLAYER_WIDTH, PLAYER_HEIGHT))
+coin_image = pygame.transform.scale(pygame.image.load('dinheiro.jpg'), (COIN_WIDTH, COIN_HEIGHT))
+obstacle_image = pygame.transform.scale(pygame.image.load('inflação-queda-flexa-vermelha.jpg'), (OBSTACLE_WIDTH, OBSTACLE_HEIGHT))
+gameover_image = pygame.transform.scale(pygame.image.load('gameover.jpg'), (SCREEN_WIDTH, SCREEN_HEIGHT))
+
+# Classes do jogo
+class Player:
+    def __init__(self):
+        self.rect = pygame.Rect(SCREEN_WIDTH // 2, SCREEN_HEIGHT - PLAYER_HEIGHT, PLAYER_WIDTH, PLAYER_HEIGHT)
+        self.score = 0
+        self.temp_bonus = None  # Habilidade temporária
+        self.bonus_timer = 0
+
+    def move(self, dx):
+        self.rect.x += dx
+        self.rect.x = max(0, min(self.rect.x, SCREEN_WIDTH - PLAYER_WIDTH))
+
+    def draw(self):
+        screen.blit(player_image, self.rect)
+
+    def apply_bonus(self):
+        if self.temp_bonus == 'double_coins':
+            self.score += 20  # Duplicar a quantidade de moedas coletadas
+        elif self.temp_bonus == 'difficulty_reduction':
+            # Apenas reduz a quantidade de obstáculos por um tempo
+            return
+
+    def update_bonus(self):
+        if self.temp_bonus is not None:
+            self.bonus_timer -= 1
+            if self.bonus_timer <= 0:
+                self.temp_bonus = None
+
+
+class Obstacle:
+    def __init__(self):
+        self.rect = pygame.Rect(random.randint(0, SCREEN_WIDTH - OBSTACLE_WIDTH), 0, OBSTACLE_WIDTH, OBSTACLE_HEIGHT)
+
+    def fall(self):
+        self.rect.y += 5
+
+    def draw(self):
+        screen.blit(obstacle_image, self.rect)
+
+
+class Coin:
+    def __init__(self):
+        self.rect = pygame.Rect(random.randint(0, SCREEN_WIDTH - COIN_WIDTH), 0, COIN_WIDTH, COIN_HEIGHT)
+
+    def fall(self):
+        self.rect.y += 3
+
+    def draw(self):
+        screen.blit(coin_image, self.rect)
+
+# Funções auxiliares
+def draw_text(text, font, color, x, y):
+    screen_text = font.render(text, True, color)
+    screen.blit(screen_text, (x, y))
+
+
+def main_menu():
+    menu_font = pygame.font.Font(None, 74)
+    selected_option = 0  # 0 = Start, 1 = Quit
+    
+    while True:
+        screen.fill(WHITE)
+
+        # Desenhar a imagem de fundo
+        screen.blit(background_image, (0, 0))
+
+        draw_text("Economia em Movimento", menu_font, BLACK, SCREEN_WIDTH // 2 - 250, SCREEN_HEIGHT // 4)
+
+        for i, option in enumerate(['Start', 'Quit']):
+            color = BUTTON_COLOR if i == selected_option else (150, 150, 150)
+            draw_text(option, menu_font, color, SCREEN_WIDTH // 2 - 50, SCREEN_HEIGHT // 2 + i * 80)
+
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                return
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_DOWN:
+                    selected_option = (selected_option + 1) % 2
+                if event.key == pygame.K_UP:
+                    selected_option = (selected_option - 1) % 2
+                if event.key == pygame.K_RETURN:
+                    if selected_option == 0:
+                        main_game()
+                    if selected_option == 1:
+                        pygame.quit()
+                        return
+
+
+def game_over_menu(score):
+    menu_font = pygame.font.Font(None, 74)
+    selected_option = 0  # 0 = Try Again, 1 = Quit
+
+    while True:
+        screen.fill(WHITE)
+
+        # Exibir imagem de game over
+        screen.blit(gameover_image, (0, 0))
+
+        # Mostrar pontuação no Game Over em azul claro
+        draw_text(f'Score: {score}', menu_font, BLUE, 10, 10)
+
+        for i, option in enumerate(['Try Again', 'Quit']):
+            color = BUTTON_COLOR if i == selected_option else (150, 150, 150)
+            draw_text(option, menu_font, color, SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + i * 80)
+
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                return
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_DOWN:
+                    selected_option = (selected_option + 1) % 2
+                if event.key == pygame.K_UP:
+                    selected_option = (selected_option - 1) % 2
+                if event.key == pygame.K_RETURN:
+                    if selected_option == 0:
+                        main_game()
+                    if selected_option == 1:
+                        pygame.quit()
+                        return
+
+
+def main_game():
+    clock = pygame.time.Clock()
+    player = Player()
+    obstacles = []
+    coins = []
+    game_over = False
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                return
+
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT]:
+            player.move(-5)
+        if keys[pygame.K_RIGHT]:
+            player.move(5)
+
+        if not game_over:
+            # Criar obstáculos
+            if random.randint(0, 30) == 0:  # Controlar a criação dos obstáculos
+                obstacles.append(Obstacle())
+
+            # Criar moedas
+            if random.randint(0, 50) == 0:  # Controlar a criação das moedas
+                coins.append(Coin())
+
+            # Atualizar posições dos obstáculos e moedas
+            for obstacle in obstacles:
+                obstacle.fall()
+                if obstacle.rect.y > SCREEN_HEIGHT:
+                    obstacles.remove(obstacle)
+
+            for coin in coins:
+                coin.fall()
+                if coin.rect.y > SCREEN_HEIGHT:
+                    coins.remove(coin)
+
+            # Verificar colisões
+            for obstacle in obstacles:
+                if player.rect.colliderect(obstacle.rect):
+                    # Perder entre 20 a 200 moedas
+                    penalty = random.randint(20, 200)
+                    player.score -= penalty
+
+                    # Ativar habilidade temporária de dificuldade
+                    if random.choice([True, False]):  # 50% de chance de ganhar uma habilidade
+                        player.temp_bonus = 'difficulty_reduction'
+                        player.bonus_timer = 100  # 100 quadros de duração
+
+            for coin in coins:
+                if player.rect.colliderect(coin.rect):
+                    # Duplicar moedas coletadas se a habilidade estiver ativa
+                    if player.temp_bonus == 'double_coins':
+                        player.score += 20  # Duplicado
+                    else:
+                        player.score += 10  # Normal
+                    coins.remove(coin)
+
+            player.update_bonus()  # Atualizar as habilidades do jogador
+
+        # Desenhar elementos do jogo
+        screen.blit(background_image, (0, 0))
+        player.draw()
+        for obstacle in obstacles:
+            obstacle.draw()
+        for coin in coins:
+            coin.draw()
+
+        # Mostrar pontuação em azul claro, sempre na mesma posição
+        font = pygame.font.Font(None, 36)
+        score_text = font.render(f'Score: {player.score}', True, BLUE)
+        screen.blit(score_text, (10, 10))
+
+        if game_over:
+            game_over_menu(player.score)
+
+        pygame.display.flip()
+        clock.tick(60)
+
+# Iniciar o jogo
+if __name__ == "__main__":
+    main_menu()
